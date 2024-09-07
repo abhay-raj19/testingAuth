@@ -1,73 +1,91 @@
-const express = require('express');
+const express = require("express");
+const jwt = require("jsonwebtoken");
 
+const JWT_SECRET = "abhayloveskiara"
 const app = express();
 
-app.use(express.json())
+app.use(express.json());
 
-const users = [ ];
+const users = [];
 
-function generateToken() {
-    let options = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+app.post("/signup", function (req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
 
-    let token = "";
-    for (let i = 0; i < 32; i++) {
-        // use a simple function here
-        token += options[Math.floor(Math.random() * options.length)];
-    }
-    return token;
-}
+  users.push({
+    username: username,
+    password: password,
+  });
 
-app.post("/signup",function(req,res) {
-    const username = req.body.username;
-    const password = req.body.password;
+  res.json({
+    message: "you have signed up, recently",
+  });
+  console.log(users);
+});
 
-    users.push({
-        username:username,
-        password:password
-    })
+app.post("/signin", function (req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
 
-    res.json({
-        message:"you have signed up, recently"
-    })
-})
-
-app.post("/signin" , function(req,res) {
-    const username = req.body.username;
-    const password = req.body.password;
-
-    //check the user exist in the local storage
-    const user = users.find(function(u){
-        if (u.username == username && u.password == password){
-            return true;
-        } else {
-            return false;
-        }
-    });
-
-    if(user){
-        const token = generateToken();
-        user.token = token;
-
-        res.json({
-            message: "The token of this user is" + token
-        })
+  //check the user exist in the local storage
+  const user = users.find(function (u) {
+    if (u.username == username && u.password == password) {
+      return true;
     } else {
-        res.status(403).json({
-            message:'Invalid username and password'
-        })
+      return false;
     }
+  });
+
+  if (user) {
+    const token = jwt.sign({
+        username:username
+    },JWT_SECRET);
 
 
 
-})
+    user.token = token;
 
-
-app.get("/",function(req,res){
     res.json({
-        "msg":"server up an up"
-    })
-})
+      message: "The token of this user is " + token,
+    });
+  } else {
+    // 403 - forbidded / Not Authorised
+    res.status(403).json({
+      message: "Invalid username and password",
+    });
+  }
+  console.log(users);
+});
 
-app.listen(3000, function(){
-    console.log("server started at 3000");
-})
+app.get("/me", function (req, res) {
+  const token = req.headers.token;
+  // const foundUser = null;
+  const decodedInf = jwt.verify(token, JWT_SECRET);
+  const username = decodedInf.username;
+
+  let foundUser = null;
+
+  foundUser = users.find(function (u) {
+    if (u.username == username) {
+      return true;
+    } else {
+      return false;
+    }
+  });
+
+  if (foundUser) {
+    return res.json({
+      //   username: foundUser.username,
+      //   password: foundUser.password,
+      message: "got it",
+    });
+  } else {
+    return res.status(401).json({
+      wrongUser: "User Not found",
+    });
+  }
+});
+
+app.listen(3000, function () {
+  console.log("server started at 3000");
+});
